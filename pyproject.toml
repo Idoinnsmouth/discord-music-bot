@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "discord-music-bot"
+version = "0.1.0"
+description = "Discord music bot with slash commands and voice playback"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "discord.py[voice]>=2.4.0",
+    "yt-dlp>=2025.1.26",
+]
+
+[project.scripts]
+discord-music-bot = "discord_music_bot.bot:main"
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.12.0",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]

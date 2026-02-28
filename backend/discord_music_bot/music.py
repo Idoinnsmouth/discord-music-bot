@@ -180,7 +180,9 @@ class MusicManager:
             requested_by=requester,
         )
 
-    async def send_now_playing_message(self, text_channel_id: int, track: Track) -> None:
+    async def send_now_playing_message(self, text_channel_id: int | None, track: Track) -> None:
+        if text_channel_id is None:
+            return
         try:
             channel = self.bot.get_channel(text_channel_id)
             if not channel:
@@ -211,7 +213,7 @@ class MusicManager:
                 exc_info=(type(error), error, error.__traceback__),
             )
 
-    def _schedule_play_next(self, guild_id: int, text_channel_id: int) -> None:
+    def _schedule_play_next(self, guild_id: int, text_channel_id: int | None) -> None:
         try:
             task = asyncio.create_task(self.play_next(guild_id, text_channel_id))
             task.add_done_callback(self._log_task_exception)
@@ -221,7 +223,7 @@ class MusicManager:
                 exc_info=(type(exc), exc, exc.__traceback__),
             )
 
-    async def play_next(self, guild_id: int, text_channel_id: int) -> None:
+    async def play_next(self, guild_id: int, text_channel_id: int | None) -> None:
         state = self.get_state(guild_id)
         try:
             guild = self.bot.get_guild(guild_id)

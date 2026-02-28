@@ -1,18 +1,21 @@
 import asyncio
+import contextlib
 import logging
 from typing import Any
 
 import discord
+import uvicorn
 from discord import app_commands
 from discord.ext import commands
 
+from .api import create_api_app
 from .config import Settings, load_settings
 from .music import MusicManager
 
 logger = logging.getLogger(__name__)
 
 
-def create_bot(settings: Settings) -> commands.Bot:
+def create_bot(settings: Settings) -> tuple[commands.Bot, MusicManager]:
     intents = discord.Intents.default()
     intents.guilds = True
     intents.voice_states = True
@@ -299,7 +302,51 @@ def create_bot(settings: Settings) -> commands.Bot:
         more = "" if len(state.queue) <= 10 else f"\n...and {len(state.queue) - 10} more."
         await interaction.followup.send("Queue:\n" + "\n".join(lines) + more)
 
-    return bot
+    return bot, music
+
+
+async def run_services(settings: Settings) -> None:
+    bot, music = create_bot(settings)
+    api_app = create_api_app(bot, music, settings)
+    api_server = uvicorn.Server(
+        uvicorn.Config(
+            api_app,
+            host=settings.api_host,
+            port=settings.api_port,
+            log_level="info",
+        )
+    )
+
+    bot_task = asyncio.create_task(bot.start(settings.token), name="discord-bot")
+    api_task = asyncio.create_task(api_server.serve(), name="control-api")
+    tasks = {bot_task, api_task}
+
+    done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+
+    first_exception: Exception | None = None
+    for task in done:
+        with contextlib.suppress(asyncio.CancelledError):
+            error = task.exception()
+            if isinstance(error, Exception):
+                first_exception = error
+                break
+    if first_exception is None and api_task in done and not api_server.started:
+        first_exception = RuntimeError(
+            f"Control API failed to start on {settings.api_host}:{settings.api_port}."
+        )
+
+    api_server.should_exit = True
+    if not bot.is_closed():
+        with contextlib.suppress(Exception):
+            await bot.close()
+
+    for task in pending:
+        task.cancel()
+    if pending:
+        await asyncio.gather(*pending, return_exceptions=True)
+
+    if first_exception:
+        raise first_exception
 
 
 def main() -> None:
@@ -308,8 +355,10 @@ def main() -> None:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
     settings = load_settings()
-    bot = create_bot(settings)
-    bot.run(settings.token)
+    try:
+        asyncio.run(run_services(settings))
+    except KeyboardInterrupt:
+        logger.info("Shutdown requested by user.")
 
 
 if __name__ == "__main__":

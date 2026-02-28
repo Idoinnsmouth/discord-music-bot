@@ -2,11 +2,11 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Debug Discord Bot (main.py)",
+      "name": "Debug Backend (Bot + FastAPI)",
       "type": "debugpy",
       "request": "launch",
-      "program": "${workspaceFolder}/main.py",
-      "cwd": "${workspaceFolder}",
+      "program": "${workspaceFolder}/backend/main.py",
+      "cwd": "${workspaceFolder}/backend",
       "console": "integratedTerminal",
       "envFile": "${workspaceFolder}/.env",
       "justMyCode": true

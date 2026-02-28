@@ -10,6 +10,23 @@
       "console": "integratedTerminal",
       "envFile": "${workspaceFolder}/.env",
       "justMyCode": true
+    },
+    {
+      "name": "Run Frontend (Next.js dev)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "env -u NODE_OPTIONS -u VSCODE_INSPECTOR_OPTIONS ${env:HOME}/.bun/bin/bun run dev -- --hostname 127.0.0.1 --port 3000",
+      "cwd": "${workspaceFolder}/frontend"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Run Full Stack (Backend + Frontend)",
+      "stopAll": false,
+      "configurations": [
+        "Debug Backend (Bot + FastAPI)",
+        "Run Frontend (Next.js dev)"
+      ]
     }
   ]
 }
